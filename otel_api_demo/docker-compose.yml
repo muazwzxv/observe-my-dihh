@@ -62,7 +62,14 @@ services:
     volumes:
       - lgtm_data:/data
     environment:
-      - ENABLE_LOGS_ALL=true
+      - ENABLE_LOGS_ALL="true"
+      - DISABLE_PYROSCOPE="true"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 512M
 
 volumes:
   mysql_data:
