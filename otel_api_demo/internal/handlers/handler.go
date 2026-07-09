@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"github.com/muazwzxv/otel_api_demo/cmd"
 	"github.com/muazwzxv/otel_api_demo/internal/handlers/user"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func SetupHandler(ctx context.Context, router chi.Router, svc *cmd.APIService) {
@@ -20,12 +20,21 @@ func SetupHandler(ctx context.Context, router chi.Router, svc *cmd.APIService) {
 }
 
 func setupUserHandlers(ctx context.Context, router chi.Router, svc *cmd.APIService) {
-	handler := &user.GetByIDHandler{
+	getByIdHandlder := &user.GetByIDHandler{
 		DB:      svc.DB,
 		Queries: svc.Queries,
 		Redis:   svc.Redis,
 	}
-	router.Get("/v1/users/{id}", handler.Handle)
+	router.Get("/api/v1/users/{id}", getByIdHandlder.Handle)
+
+	createUserHandler := &user.CreateUserHandler{
+		DB:      svc.DB,
+		Queries: svc.Queries,
+		Redis:   svc.Redis,
+	}
+
+	router.Post("/api/v1/user", createUserHandler.Handle)
+
 	slog.InfoContext(ctx, "Registered user handlers")
 }
 

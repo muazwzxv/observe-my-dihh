@@ -67,9 +67,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 2g
         reservations:
-          memory: 512M
+          memory: 1g
 
 volumes:
   mysql_data:

@@ -7,6 +7,52 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// fanOutHandler writes each log record to multiple slog.Handlers.
+// Used to send logs to both stdout (local dev visibility) and OTLP (Grafana/Loki).
+// Each handler gets a cloned record so they don't interfere.
+type fanOutHandler struct {
+	handlers []slog.Handler
+}
+
+func (h *fanOutHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *fanOutHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, r.Level) {
+			if err := handler.Handle(ctx, r.Clone()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (h *fanOutHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		handlers[i] = handler.WithAttrs(attrs)
+	}
+	return &fanOutHandler{handlers: handlers}
+}
+
+func (h *fanOutHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		handlers[i] = handler.WithGroup(name)
+	}
+	return &fanOutHandler{handlers: handlers}
+}
+
+// traceLogHandler wraps a slog.Handler and injects trace_id and span_id
+// from the OTel span context into every log record. Used for the stdout
+// branch of the fan-out so local logs correlate with traces.
 type traceLogHandler struct {
 	base slog.Handler
 }
